@@ -1,5 +1,5 @@
 dview-template
-![Release](https://jitpack.io/v/dora4/dview-template.svg)
+![Release](https://jitpack.io/v/dora4/dview-iconlabel-view.svg)
 --------------------------------
 
 #### Gradle依赖配置
