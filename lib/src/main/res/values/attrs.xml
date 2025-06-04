@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <declare-styleable name="DoraIconLabelView">
+        <attr name="dview_ilv_icon" format="reference" />
+        <attr name="dview_ilv_iconScaleX" format="fraction"/>
+        <attr name="dview_ilv_iconScaleY" format="fraction"/>
+        <attr name="dview_ilv_text" format="string|reference" />
+        <attr name="dview_ilv_textColor" format="color|reference" />
+        <attr name="dview_ilv_hoverColor" format="color|reference" />
+        <attr name="dview_ilv_textSize" format="dimension|reference" />
+        <attr name="dview_ilv_iconLabelGap" format="dimension|reference"/>
+        <attr name="dview_ilv_ratio" format="fraction"/>
+    </declare-styleable>
+</resources>
