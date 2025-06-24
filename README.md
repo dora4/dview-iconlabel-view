@@ -1,4 +1,4 @@
-dview-template
+dview-iconlabel-view
 ![Release](https://jitpack.io/v/dora4/dview-iconlabel-view.svg)
 --------------------------------
 
