@@ -2,6 +2,9 @@ dview-template
 ![Release](https://jitpack.io/v/dora4/dview-iconlabel-view.svg)
 --------------------------------
 
+#### 卡片
+![DORA视图 图标文字卡](https://github.com/user-attachments/assets/1df91072-cd14-458e-a187-c7cea89cf943)
+
 #### Gradle依赖配置
 
 ```groovy
