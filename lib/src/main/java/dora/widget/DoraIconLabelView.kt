@@ -17,36 +17,29 @@ class DoraIconLabelView @JvmOverloads constructor(
     private var textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
     private var textRect = Rect()
 
-    // icon 原图
     private var iconBitmap: Bitmap
-
-    // 绘制区域
     private var iconRect = Rect()
     private var iconDrawRect = Rect()
 
-    // 参数
     private var iconLabelGap: Int
     private var iconSize: Int
 
-    // 文字
     private var text: String = ""
     private var labelTextSize: Float = 12f
     private var labelTextColor: Int = Color.BLACK
 
-    // 背景相关
     private var iconBackgroundShape: Int = SHAPE_NONE
     private var iconBackgroundColor: Int = Color.LTGRAY
     private var iconBackgroundPadding: Int = 0
     private var iconBackgroundBorder: Boolean = false
     private var iconCornerRadius: Float = 0f
+    private var iconBackgroundBorderColor: Int = Color.DKGRAY
+    private var iconBackgroundBorderWidth: Float = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP, 1f, resources.displayMetrics
+    )
+
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, 1f, resources.displayMetrics
-        )
-        color = Color.DKGRAY
-    }
+    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
 
     companion object {
         const val SHAPE_NONE = 0
@@ -60,29 +53,19 @@ class DoraIconLabelView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        // 文字尺寸
         textPaint.getTextBounds(text, 0, text.length, textRect)
+        val bgSize = if (iconBackgroundShape == SHAPE_NONE) iconSize else iconSize + 2 * iconBackgroundPadding
 
-        // 背景尺寸（有背景则背景优先）
-        val bgSize = if (iconBackgroundShape == SHAPE_NONE) {
-            iconSize
-        } else {
-            iconSize + 2 * iconBackgroundPadding
-        }
-
-        // 控件尺寸
         val desiredWidth = bgSize.coerceAtLeast(textRect.width()) + paddingLeft + paddingRight
         val desiredHeight = bgSize + iconLabelGap + textRect.height() + paddingTop + paddingBottom
 
         val viewWidth = resolveSize(desiredWidth, widthMeasureSpec)
         val viewHeight = resolveSize(desiredHeight, heightMeasureSpec)
 
-        // icon 区域（背景的整体区域）
         val iconLeft = paddingLeft + (viewWidth - paddingLeft - paddingRight - bgSize) / 2
         val iconTop = paddingTop
         iconRect.set(iconLeft, iconTop, iconLeft + bgSize, iconTop + bgSize)
 
-        // icon 内部绘制区域（考虑 padding）
         iconDrawRect.set(
             iconRect.left + iconBackgroundPadding,
             iconRect.top + iconBackgroundPadding,
@@ -90,7 +73,6 @@ class DoraIconLabelView @JvmOverloads constructor(
             iconRect.bottom - iconBackgroundPadding
         )
 
-        // 文字区域（在背景下方）
         val textLeft = paddingLeft + (viewWidth - paddingLeft - paddingRight - textRect.width()) / 2
         val textTop = iconRect.bottom + iconLabelGap
         textRect.offsetTo(textLeft, textTop)
@@ -106,6 +88,9 @@ class DoraIconLabelView @JvmOverloads constructor(
     private fun drawIconWithBackground(canvas: Canvas) {
         if (iconBackgroundShape != SHAPE_NONE) {
             bgPaint.color = iconBackgroundColor
+            borderPaint.color = iconBackgroundBorderColor
+            borderPaint.strokeWidth = iconBackgroundBorderWidth
+
             when (iconBackgroundShape) {
                 SHAPE_ROUNDED_RECT -> {
                     canvas.drawRoundRect(
@@ -140,8 +125,6 @@ class DoraIconLabelView @JvmOverloads constructor(
                 }
             }
         }
-
-        // 画 icon
         canvas.drawBitmap(iconBitmap, null, iconDrawRect, null)
     }
 
@@ -190,7 +173,6 @@ class DoraIconLabelView @JvmOverloads constructor(
             textColors.defaultColor
         )
 
-        // 背景属性
         iconBackgroundShape = a.getInt(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundShape, SHAPE_NONE)
         iconBackgroundColor = a.getColor(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundColor, Color.LTGRAY)
         iconBackgroundPadding = a.getDimensionPixelSize(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundPadding, 0)
@@ -198,6 +180,15 @@ class DoraIconLabelView @JvmOverloads constructor(
         iconCornerRadius = a.getDimension(
             R.styleable.DoraIconLabelView_dview_ilv_iconCornerRadius,
             TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, resources.displayMetrics)
+        )
+
+        iconBackgroundBorderColor = a.getColor(
+            R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundBorderColor,
+            Color.DKGRAY
+        )
+        iconBackgroundBorderWidth = a.getDimension(
+            R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundBorderWidth,
+            TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1f, resources.displayMetrics)
         )
 
         a.recycle()
