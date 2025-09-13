@@ -91,8 +91,8 @@ class DoraIconLabelView @JvmOverloads constructor(
         val iconW = iconBitmap?.width ?: 0
         val iconH = iconBitmap?.height ?: 0
 
-        val contentWidth = iconW + if (text != null) (iconLabelGap + textWidth) else 0
-        val contentHeight = maxOf(iconH, textHeight)
+        val contentWidth = maxOf(iconW, textWidth)
+        val contentHeight = iconH + if (text != null) (iconLabelGap + textHeight) else 0
 
         val measuredW = resolveSize(contentWidth + paddingLeft + paddingRight, widthMeasureSpec)
         val measuredH = resolveSize(contentHeight + paddingTop + paddingBottom, heightMeasureSpec)
@@ -103,33 +103,27 @@ class DoraIconLabelView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val iconBmp = iconBitmap ?: return
+        val iconBmp = iconBitmap
+        val textStr = text
 
-        val left = paddingLeft
-        val top = paddingTop + (height - paddingTop - paddingBottom - iconBmp.height) / 2
-        val right = left + iconBmp.width
-        val bottom = top + iconBmp.height
+        val centerX = width / 2f
+        var top = paddingTop
 
-        iconRect.set(left, top, right, bottom)
+        // --- 绘制 icon ---
+        if (iconBmp != null) {
+            val left = (centerX - iconBmp.width / 2).toInt()
+            val right = left + iconBmp.width
+            val bottom = top + iconBmp.height
+            iconRect.set(left, top, right, bottom)
 
-        // 绘制背景
-        if (iconBackgroundShape != SHAPE_NONE) {
-            val bgLeft = iconRect.left - iconBackgroundPadding
-            val bgTop = iconRect.top - iconBackgroundPadding
-            val bgRight = iconRect.right + iconBackgroundPadding
-            val bgBottom = iconRect.bottom + iconBackgroundPadding
-            when (iconBackgroundShape) {
-                SHAPE_ROUNDED_RECT -> {
-                    canvas.drawRoundRect(
-                        bgLeft.toFloat(),
-                        bgTop.toFloat(),
-                        bgRight.toFloat(),
-                        bgBottom.toFloat(),
-                        iconCornerRadius,
-                        iconCornerRadius,
-                        bgPaint
-                    )
-                    if (iconBackgroundBorder) {
+            // 背景
+            if (iconBackgroundShape != SHAPE_NONE) {
+                val bgLeft = iconRect.left - iconBackgroundPadding
+                val bgTop = iconRect.top - iconBackgroundPadding
+                val bgRight = iconRect.right + iconBackgroundPadding
+                val bgBottom = iconRect.bottom + iconBackgroundPadding
+                when (iconBackgroundShape) {
+                    SHAPE_ROUNDED_RECT -> {
                         canvas.drawRoundRect(
                             bgLeft.toFloat(),
                             bgTop.toFloat(),
@@ -137,30 +131,44 @@ class DoraIconLabelView @JvmOverloads constructor(
                             bgBottom.toFloat(),
                             iconCornerRadius,
                             iconCornerRadius,
-                            borderPaint
+                            bgPaint
                         )
+                        if (iconBackgroundBorder) {
+                            canvas.drawRoundRect(
+                                bgLeft.toFloat(),
+                                bgTop.toFloat(),
+                                bgRight.toFloat(),
+                                bgBottom.toFloat(),
+                                iconCornerRadius,
+                                iconCornerRadius,
+                                borderPaint
+                            )
+                        }
                     }
-                }
-                SHAPE_CIRCLE -> {
-                    val cx = (bgLeft + bgRight) / 2f
-                    val cy = (bgTop + bgBottom) / 2f
-                    val radius = (bgRight - bgLeft).coerceAtMost(bgBottom - bgTop) / 2f
-                    canvas.drawCircle(cx, cy, radius.toFloat(), bgPaint)
-                    if (iconBackgroundBorder) {
-                        canvas.drawCircle(cx, cy, radius.toFloat(), borderPaint)
+                    SHAPE_CIRCLE -> {
+                        val cx = (bgLeft + bgRight) / 2f
+                        val cy = (bgTop + bgBottom) / 2f
+                        val radius = (bgRight - bgLeft).coerceAtMost(bgBottom - bgTop) / 2f
+                        canvas.drawCircle(cx, cy, radius, bgPaint)
+                        if (iconBackgroundBorder) {
+                            canvas.drawCircle(cx, cy, radius, borderPaint)
+                        }
                     }
                 }
             }
+
+            // 绘制 icon
+            canvas.drawBitmap(iconBmp, iconRect.left.toFloat(), iconRect.top.toFloat(), null)
+
+            top = iconRect.bottom
         }
 
-        // 绘制 icon
-        canvas.drawBitmap(iconBmp, iconRect.left.toFloat(), iconRect.top.toFloat(), null)
-
-        // 绘制文字
-        text?.let {
-            val x = iconRect.right + iconLabelGap
-            val y = height / 2f - (textPaint.descent() + textPaint.ascent()) / 2
-            canvas.drawText(it, x.toFloat(), y, textPaint)
+        // --- 绘制文字 ---
+        if (textStr != null) {
+            top += iconLabelGap
+            val x = centerX - textPaint.measureText(textStr) / 2
+            val y = top - textPaint.ascent() // 基线对齐
+            canvas.drawText(textStr, x, y, textPaint)
         }
     }
 
