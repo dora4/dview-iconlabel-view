@@ -6,18 +6,25 @@
         <attr name="dview_ilv_text" format="string|reference"/>
         <attr name="dview_ilv_textSize" format="dimension|reference"/>
         <attr name="dview_ilv_textColor" format="color|reference"/>
-        <attr name="dview_ilv_hoverColor" format="color|reference"/>
-        <attr name="dview_ilv_ratio" format="fraction"/>
-        <attr name="dview_ilv_iconScaleX" format="fraction"/>
-        <attr name="dview_ilv_iconScaleY" format="fraction"/>
+        <!-- icon的大小，有icon背景时为icon背景的大小 -->
+        <attr name="dview_ilv_iconSize" format="dimension|reference"/>
+        <!-- 文字和icon的间距，有icon背景时为和icon背景的间距 -->
         <attr name="dview_ilv_iconLabelGap" format="dimension|reference"/>
-        <attr name="dview_ilv_iconBackgroundColor" format="color|reference"/>
+
+        <!-- icon背景形状，默认无 -->
         <attr name="dview_ilv_iconBackgroundShape">
-            <enum name="rounded_rect" value="0"/>
-            <enum name="circle" value="1"/>
+            <enum name="none" value="0"/>
+            <enum name="rounded_rect" value="1"/>
+            <enum name="circle" value="2"/>
         </attr>
+        <!-- icon背景色，默认灰色 -->
+        <attr name="dview_ilv_iconBackgroundColor" format="color|reference"/>
+        <!-- icon背景内边距，和icon的间距 -->
+        <attr name="dview_ilv_iconBackgroundPadding" format="dimension|reference"/>
+        <!-- icon背景是否带边框 -->
+        <attr name="dview_ilv_iconBackgroundBorder" format="boolean"/>
+        <!-- icon背景为圆角矩形时的圆角大小 -->
         <attr name="dview_ilv_iconCornerRadius" format="dimension|reference"/>
-        <attr name="dview_ilv_iconPadding" format="dimension|reference"/>
     </declare-styleable>
 
 </resources>
