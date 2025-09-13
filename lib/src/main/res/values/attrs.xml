@@ -28,7 +28,7 @@
         <!-- icon背景边框宽度 -->
         <attr name="dview_ilv_iconBackgroundBorderWidth" format="dimension|reference"/>
         <!-- icon背景为圆角矩形时的圆角大小 -->
-        <attr name="dview_ilv_iconCornerRadius" format="dimension|reference"/>
+        <attr name="dview_ilv_iconBackgroundCornerRadius" format="dimension|reference"/>
     </declare-styleable>
 
 </resources>

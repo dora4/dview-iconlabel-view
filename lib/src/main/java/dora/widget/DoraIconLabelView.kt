@@ -6,13 +6,13 @@ import android.os.Looper
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.TypedValue
-import androidx.appcompat.widget.AppCompatRadioButton
+import androidx.appcompat.widget.AppCompatTextView
 import dora.widget.iconlabelview.R
 
 class DoraIconLabelView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : AppCompatRadioButton(context, attrs, defStyleAttr) {
+) : AppCompatTextView(context, attrs, defStyleAttr) {
 
     private var textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
     private var textRect = Rect()
@@ -32,7 +32,7 @@ class DoraIconLabelView @JvmOverloads constructor(
     private var iconBackgroundColor: Int = Color.LTGRAY
     private var iconBackgroundPadding: Int = 0
     private var iconBackgroundBorder: Boolean = false
-    private var iconCornerRadius: Float = 0f
+    private var iconBackgroundCornerRadius: Float = 0f
     private var iconBackgroundBorderColor: Int = Color.DKGRAY
     private var iconBackgroundBorderWidth: Float = TypedValue.applyDimension(
         TypedValue.COMPLEX_UNIT_DIP, 1f, resources.displayMetrics
@@ -98,8 +98,8 @@ class DoraIconLabelView @JvmOverloads constructor(
                         iconRect.top.toFloat(),
                         iconRect.right.toFloat(),
                         iconRect.bottom.toFloat(),
-                        iconCornerRadius,
-                        iconCornerRadius,
+                        iconBackgroundCornerRadius,
+                        iconBackgroundCornerRadius,
                         bgPaint
                     )
                     if (iconBackgroundBorder) {
@@ -108,8 +108,8 @@ class DoraIconLabelView @JvmOverloads constructor(
                             iconRect.top.toFloat(),
                             iconRect.right.toFloat(),
                             iconRect.bottom.toFloat(),
-                            iconCornerRadius,
-                            iconCornerRadius,
+                            iconBackgroundCornerRadius,
+                            iconBackgroundCornerRadius,
                             borderPaint
                         )
                     }
@@ -177,8 +177,8 @@ class DoraIconLabelView @JvmOverloads constructor(
         iconBackgroundColor = a.getColor(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundColor, Color.LTGRAY)
         iconBackgroundPadding = a.getDimensionPixelSize(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundPadding, 0)
         iconBackgroundBorder = a.getBoolean(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundBorder, false)
-        iconCornerRadius = a.getDimension(
-            R.styleable.DoraIconLabelView_dview_ilv_iconCornerRadius,
+        iconBackgroundCornerRadius = a.getDimension(
+            R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundCornerRadius,
             TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, resources.displayMetrics)
         )
 
