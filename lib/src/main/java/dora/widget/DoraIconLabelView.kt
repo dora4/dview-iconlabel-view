@@ -28,8 +28,8 @@ class DoraIconLabelView @JvmOverloads constructor(
     private var iconBitmap: Bitmap
 
     // 背景配置
-    private var iconBackgroundColor: Int = Color.LTGRAY
-    private var iconBackgroundShape: Int = SHAPE_ROUNDED_RECT
+    private var iconBackgroundColor: Int = Color.TRANSPARENT
+    private var iconBackgroundShape: Int = SHAPE_NONE
     private var iconCornerRadius: Float = 12f
     private var iconPadding: Int = 0
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -37,6 +37,7 @@ class DoraIconLabelView @JvmOverloads constructor(
     }
 
     companion object {
+        const val SHAPE_NONE = -1
         const val SHAPE_ROUNDED_RECT = 0
         const val SHAPE_CIRCLE = 1
     }
@@ -47,7 +48,7 @@ class DoraIconLabelView @JvmOverloads constructor(
     }
 
     /**
-     * 选中比例（0~1），用于过渡
+     * 选中比例（0~1），用于过渡。
      */
     var ratio: Float = 0f
         set(value) {
@@ -98,6 +99,7 @@ class DoraIconLabelView @JvmOverloads constructor(
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+
         val iconWidth = iconBitmap.width
         val iconHeight = iconBitmap.height
         val textBounds = Rect()
@@ -114,16 +116,18 @@ class DoraIconLabelView @JvmOverloads constructor(
             MeasureSpec.getSize(heightMeasureSpec)
         }
 
-        val iconLeft = paddingLeft + (viewWidth - paddingLeft - paddingRight - iconWidth) / 2
-        val iconRight = iconLeft + iconWidth
+        // --- 先放置文字在底部 ---
         val textLeft = paddingLeft + (viewWidth - paddingLeft - paddingRight - textBounds.width()) / 2
-        val textRight = textLeft + textBounds.width()
-        val totalHeight = iconHeight + iconLabelGap + textBounds.height()
-        val iconTop = paddingTop + (viewHeight - paddingTop - paddingBottom - totalHeight) / 2
-        val textTop = iconTop + iconHeight + iconLabelGap
+        val textTop = viewHeight - paddingBottom - textBounds.height()
+        textRect.set(textLeft, textTop, textLeft + textBounds.width(), textTop + textBounds.height())
 
-        iconRect.set(iconLeft, iconTop, iconRight, iconTop + iconHeight)
-        textRect.set(textLeft, textTop, textRight, textTop + textBounds.height())
+        // --- 再让 icon 在剩余空间垂直居中 ---
+        val iconAreaTop = paddingTop
+        val iconAreaBottom = textRect.top - iconLabelGap
+        val iconAreaHeight = iconAreaBottom - iconAreaTop
+        val iconTop = iconAreaTop + (iconAreaHeight - iconHeight) / 2
+        val iconLeft = paddingLeft + (viewWidth - paddingLeft - paddingRight - iconWidth) / 2
+        iconRect.set(iconLeft, iconTop, iconLeft + iconWidth, iconTop + iconHeight)
 
         // icon 实际绘制区域（考虑内边距）
         iconDrawRect.set(
@@ -148,27 +152,26 @@ class DoraIconLabelView @JvmOverloads constructor(
     }
 
     private fun resetIcon(canvas: Canvas) {
-        // 绘制背景
-        bgPaint.color = iconBackgroundColor
-        when (iconBackgroundShape) {
-            SHAPE_ROUNDED_RECT -> {
-                canvas.drawRoundRect(
-                    iconRect.left.toFloat(),
-                    iconRect.top.toFloat(),
-                    iconRect.right.toFloat(),
-                    iconRect.bottom.toFloat(),
-                    iconCornerRadius,
-                    iconCornerRadius,
-                    bgPaint
-                )
-            }
-            SHAPE_CIRCLE -> {
-                val cx = iconRect.exactCenterX()
-                val cy = iconRect.exactCenterY()
-                val radius = (iconRect.width().coerceAtMost(iconRect.height())) / 2f
-                canvas.drawCircle(cx, cy, radius, bgPaint)
-            }
+        // 背景可选
+        if (iconBackgroundShape == SHAPE_ROUNDED_RECT) {
+            bgPaint.color = iconBackgroundColor
+            canvas.drawRoundRect(
+                iconRect.left.toFloat(),
+                iconRect.top.toFloat(),
+                iconRect.right.toFloat(),
+                iconRect.bottom.toFloat(),
+                iconCornerRadius,
+                iconCornerRadius,
+                bgPaint
+            )
+        } else if (iconBackgroundShape == SHAPE_CIRCLE) {
+            bgPaint.color = iconBackgroundColor
+            val cx = iconRect.exactCenterX()
+            val cy = iconRect.exactCenterY()
+            val radius = (iconRect.width().coerceAtMost(iconRect.height())) / 2f
+            canvas.drawCircle(cx, cy, radius, bgPaint)
         }
+
         // 绘制 icon
         canvas.drawBitmap(iconBitmap, null, iconDrawRect, null)
     }
@@ -195,21 +198,7 @@ class DoraIconLabelView @JvmOverloads constructor(
         textPaint.alpha = 255 - alpha
         val topY = textRect.top
         val baselineY: Float = topY - textPaint.fontMetrics.top
-        for (index in 0..text.length) {
-            val subText = text.substring(0, text.length - index)
-            val textWidth = textPaint.measureText(subText)
-            if (subText.isNotEmpty()) {
-                val lastTextWidth = textPaint.measureText(subText.last().toString())
-                if (textWidth < measuredWidth - paddingLeft - paddingRight + lastTextWidth) {
-                    textRect.left =
-                        paddingLeft + ((measuredWidth - paddingLeft - paddingRight - textWidth) / 2).toInt()
-                    canvas.drawText(
-                        subText, textRect.left.toFloat(), baselineY - textRect.height() / 2, textPaint
-                    )
-                    return
-                }
-            }
-        }
+        canvas.drawText(text, textRect.left.toFloat(), baselineY, textPaint)
     }
 
     private fun drawHoverText(canvas: Canvas, alpha: Int) {
@@ -217,21 +206,7 @@ class DoraIconLabelView @JvmOverloads constructor(
         textPaint.alpha = alpha
         val topY = textRect.top
         val baselineY: Float = topY - textPaint.fontMetrics.top
-        for (index in 0..text.length) {
-            val subText = text.substring(0, text.length - index)
-            val textWidth = textPaint.measureText(subText)
-            if (subText.isNotEmpty()) {
-                val lastTextWidth = textPaint.measureText(subText.last().toString())
-                if (textWidth < measuredWidth - paddingLeft - paddingRight + lastTextWidth) {
-                    textRect.left =
-                        paddingLeft + ((measuredWidth - paddingLeft - paddingRight - textWidth) / 2).toInt()
-                    canvas.drawText(
-                        subText, textRect.left.toFloat(), baselineY - textRect.height() / 2, textPaint
-                    )
-                    return
-                }
-            }
-        }
+        canvas.drawText(text, textRect.left.toFloat(), baselineY, textPaint)
     }
 
     private fun invalidateView() {
@@ -274,14 +249,14 @@ class DoraIconLabelView @JvmOverloads constructor(
             a.getColor(R.styleable.DoraIconLabelView_dview_ilv_textColor, textColors.defaultColor)
         ratio = a.getFraction(R.styleable.DoraIconLabelView_dview_ilv_ratio, 1, 1, 0f)
 
-        // 背景属性
+        // 背景属性（默认不画）
         iconBackgroundColor = a.getColor(
             R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundColor,
-            Color.LTGRAY
+            Color.TRANSPARENT
         )
         iconBackgroundShape = a.getInt(
             R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundShape,
-            SHAPE_ROUNDED_RECT
+            SHAPE_NONE
         )
         iconCornerRadius = a.getDimension(
             R.styleable.DoraIconLabelView_dview_ilv_iconCornerRadius,
