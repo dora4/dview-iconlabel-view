@@ -2,19 +2,51 @@ package dora.widget
 
 import android.content.Context
 import android.graphics.*
+import android.os.Looper
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.TypedValue
-import android.view.View
-import androidx.annotation.ColorInt
-import androidx.core.content.ContextCompat
+import androidx.appcompat.widget.AppCompatRadioButton
 import dora.widget.iconlabelview.R
 
 class DoraIconLabelView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
+    context: Context, attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : View(context, attrs, defStyleAttr) {
+) : AppCompatRadioButton(context, attrs, defStyleAttr) {
+
+    private var textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+    private var textRect = Rect()
+
+    // icon 原图
+    private var iconBitmap: Bitmap
+
+    // 绘制区域
+    private var iconRect = Rect()
+    private var iconDrawRect = Rect()
+
+    // 参数
+    private var iconLabelGap: Int
+    private var iconSize: Int
+
+    // 文字
+    private var text: String = ""
+    private var labelTextSize: Float = 12f
+    private var labelTextColor: Int = Color.BLACK
+
+    // 背景相关
+    private var iconBackgroundShape: Int = SHAPE_NONE
+    private var iconBackgroundColor: Int = Color.LTGRAY
+    private var iconBackgroundPadding: Int = 0
+    private var iconBackgroundBorder: Boolean = false
+    private var iconCornerRadius: Float = 0f
+    private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP, 1f, resources.displayMetrics
+        )
+        color = Color.DKGRAY
+    }
 
     companion object {
         const val SHAPE_NONE = 0
@@ -22,169 +54,155 @@ class DoraIconLabelView @JvmOverloads constructor(
         const val SHAPE_CIRCLE = 2
     }
 
-    private var text: String? = null
-    private var textSize: Float = sp2px(14f)
-    @ColorInt
-    private var textColor: Int = Color.BLACK
-
-    private var icon: Int = 0
-    private var iconBitmap: Bitmap? = null
-    private var iconSize: Int = -1
-    private var iconLabelGap: Int = dp2px(4f)
-
-    private var iconBackgroundShape: Int = SHAPE_NONE
-    @ColorInt
-    private var iconBackgroundColor: Int = Color.LTGRAY
-    private var iconBackgroundPadding: Int = 0
-    private var iconBackgroundBorder: Boolean = false
-    private var iconCornerRadius: Float = dp2px(4f).toFloat()
-
-    private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-    private val iconRect = Rect()
-    private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = dp2px(1f).toFloat()
-        color = Color.BLACK
-    }
-
-    init {
-        val a = context.obtainStyledAttributes(attrs, R.styleable.DoraIconLabelView)
-
-        icon = a.getResourceId(R.styleable.DoraIconLabelView_dview_ilv_icon, 0)
-        text = a.getString(R.styleable.DoraIconLabelView_dview_ilv_text)
-        textSize = a.getDimension(R.styleable.DoraIconLabelView_dview_ilv_textSize, textSize)
-        textColor = a.getColor(R.styleable.DoraIconLabelView_dview_ilv_textColor, textColor)
-        iconSize = a.getDimensionPixelSize(R.styleable.DoraIconLabelView_dview_ilv_iconSize, -1)
-        iconLabelGap = a.getDimensionPixelSize(R.styleable.DoraIconLabelView_dview_ilv_iconLabelGap, iconLabelGap)
-
-        iconBackgroundShape = a.getInt(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundShape, SHAPE_NONE)
-        iconBackgroundColor = a.getColor(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundColor, iconBackgroundColor)
-        iconBackgroundPadding = a.getDimensionPixelSize(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundPadding, 0)
-        iconBackgroundBorder = a.getBoolean(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundBorder, false)
-        iconCornerRadius = a.getDimension(R.styleable.DoraIconLabelView_dview_ilv_iconCornerRadius, iconCornerRadius)
-
-        a.recycle()
-
-        if (icon != 0) {
-            val drawable = ContextCompat.getDrawable(context, icon)
-            drawable?.let {
-                val bmpWidth = if (iconSize > 0) iconSize else it.intrinsicWidth
-                val bmpHeight = if (iconSize > 0) iconSize else it.intrinsicHeight
-                iconBitmap = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
-                val canvas = Canvas(iconBitmap!!)
-                it.setBounds(0, 0, bmpWidth, bmpHeight)
-                it.draw(canvas)
-            }
-        }
-
-        textPaint.textSize = textSize
-        textPaint.color = textColor
-        bgPaint.style = Paint.Style.FILL
-        bgPaint.color = iconBackgroundColor
+    fun setIconBitmap(bitmap: Bitmap) {
+        this.iconBitmap = bitmap
+        invalidateView()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val textWidth = text?.let { textPaint.measureText(it).toInt() } ?: 0
-        val textHeight = text?.let { (textPaint.fontMetrics.descent - textPaint.fontMetrics.ascent).toInt() } ?: 0
+        // 文字尺寸
+        textPaint.getTextBounds(text, 0, text.length, textRect)
 
-        val iconW = iconBitmap?.width ?: 0
-        val iconH = iconBitmap?.height ?: 0
+        // 背景尺寸（有背景则背景优先）
+        val bgSize = if (iconBackgroundShape == SHAPE_NONE) {
+            iconSize
+        } else {
+            iconSize + 2 * iconBackgroundPadding
+        }
 
-        val contentWidth = maxOf(iconW, textWidth)
-        val contentHeight = iconH + if (text != null) (iconLabelGap + textHeight) else 0
+        // 控件尺寸
+        val desiredWidth = bgSize.coerceAtLeast(textRect.width()) + paddingLeft + paddingRight
+        val desiredHeight = bgSize + iconLabelGap + textRect.height() + paddingTop + paddingBottom
 
-        val measuredW = resolveSize(contentWidth + paddingLeft + paddingRight, widthMeasureSpec)
-        val measuredH = resolveSize(contentHeight + paddingTop + paddingBottom, heightMeasureSpec)
+        val viewWidth = resolveSize(desiredWidth, widthMeasureSpec)
+        val viewHeight = resolveSize(desiredHeight, heightMeasureSpec)
 
-        setMeasuredDimension(measuredW, measuredH)
+        // icon 区域（背景的整体区域）
+        val iconLeft = paddingLeft + (viewWidth - paddingLeft - paddingRight - bgSize) / 2
+        val iconTop = paddingTop
+        iconRect.set(iconLeft, iconTop, iconLeft + bgSize, iconTop + bgSize)
+
+        // icon 内部绘制区域（考虑 padding）
+        iconDrawRect.set(
+            iconRect.left + iconBackgroundPadding,
+            iconRect.top + iconBackgroundPadding,
+            iconRect.right - iconBackgroundPadding,
+            iconRect.bottom - iconBackgroundPadding
+        )
+
+        // 文字区域（在背景下方）
+        val textLeft = paddingLeft + (viewWidth - paddingLeft - paddingRight - textRect.width()) / 2
+        val textTop = iconRect.bottom + iconLabelGap
+        textRect.offsetTo(textLeft, textTop)
+
+        setMeasuredDimension(viewWidth, viewHeight)
     }
 
     override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
+        drawIconWithBackground(canvas)
+        drawText(canvas)
+    }
 
-        val iconBmp = iconBitmap
-        val textStr = text
-
-        val centerX = width / 2f
-        var top = paddingTop
-
-        // --- 绘制 icon ---
-        if (iconBmp != null) {
-            val left = (centerX - iconBmp.width / 2).toInt()
-            val right = left + iconBmp.width
-            val bottom = top + iconBmp.height
-            iconRect.set(left, top, right, bottom)
-
-            // 背景
-            if (iconBackgroundShape != SHAPE_NONE) {
-                val bgLeft = iconRect.left - iconBackgroundPadding
-                val bgTop = iconRect.top - iconBackgroundPadding
-                val bgRight = iconRect.right + iconBackgroundPadding
-                val bgBottom = iconRect.bottom + iconBackgroundPadding
-                when (iconBackgroundShape) {
-                    SHAPE_ROUNDED_RECT -> {
+    private fun drawIconWithBackground(canvas: Canvas) {
+        if (iconBackgroundShape != SHAPE_NONE) {
+            bgPaint.color = iconBackgroundColor
+            when (iconBackgroundShape) {
+                SHAPE_ROUNDED_RECT -> {
+                    canvas.drawRoundRect(
+                        iconRect.left.toFloat(),
+                        iconRect.top.toFloat(),
+                        iconRect.right.toFloat(),
+                        iconRect.bottom.toFloat(),
+                        iconCornerRadius,
+                        iconCornerRadius,
+                        bgPaint
+                    )
+                    if (iconBackgroundBorder) {
                         canvas.drawRoundRect(
-                            bgLeft.toFloat(),
-                            bgTop.toFloat(),
-                            bgRight.toFloat(),
-                            bgBottom.toFloat(),
+                            iconRect.left.toFloat(),
+                            iconRect.top.toFloat(),
+                            iconRect.right.toFloat(),
+                            iconRect.bottom.toFloat(),
                             iconCornerRadius,
                             iconCornerRadius,
-                            bgPaint
+                            borderPaint
                         )
-                        if (iconBackgroundBorder) {
-                            canvas.drawRoundRect(
-                                bgLeft.toFloat(),
-                                bgTop.toFloat(),
-                                bgRight.toFloat(),
-                                bgBottom.toFloat(),
-                                iconCornerRadius,
-                                iconCornerRadius,
-                                borderPaint
-                            )
-                        }
                     }
-                    SHAPE_CIRCLE -> {
-                        val cx = (bgLeft + bgRight) / 2f
-                        val cy = (bgTop + bgBottom) / 2f
-                        val radius = (bgRight - bgLeft).coerceAtMost(bgBottom - bgTop) / 2f
-                        canvas.drawCircle(cx, cy, radius, bgPaint)
-                        if (iconBackgroundBorder) {
-                            canvas.drawCircle(cx, cy, radius, borderPaint)
-                        }
+                }
+                SHAPE_CIRCLE -> {
+                    val cx = iconRect.exactCenterX()
+                    val cy = iconRect.exactCenterY()
+                    val radius = iconRect.width().coerceAtMost(iconRect.height()) / 2f
+                    canvas.drawCircle(cx, cy, radius, bgPaint)
+                    if (iconBackgroundBorder) {
+                        canvas.drawCircle(cx, cy, radius, borderPaint)
                     }
                 }
             }
-
-            // 绘制 icon
-            canvas.drawBitmap(iconBmp, iconRect.left.toFloat(), iconRect.top.toFloat(), null)
-
-            top = iconRect.bottom
         }
 
-        // --- 绘制文字 ---
-        if (textStr != null) {
-            top += iconLabelGap
-            val x = centerX - textPaint.measureText(textStr) / 2
-            val y = top - textPaint.ascent() // 基线对齐
-            canvas.drawText(textStr, x, y, textPaint)
+        // 画 icon
+        canvas.drawBitmap(iconBitmap, null, iconDrawRect, null)
+    }
+
+    private fun drawText(canvas: Canvas) {
+        textPaint.color = labelTextColor
+        val baseline = textRect.top - textPaint.fontMetrics.top
+        canvas.drawText(text, textRect.left.toFloat(), baseline, textPaint)
+    }
+
+    private fun invalidateView() {
+        if (Looper.getMainLooper() == Looper.myLooper()) {
+            invalidate()
+        } else {
+            postInvalidate()
         }
     }
 
-    private fun dp2px(dp: Float): Int {
-        return TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            dp,
-            resources.displayMetrics
-        ).toInt()
-    }
+    init {
+        val a = context.obtainStyledAttributes(attrs, R.styleable.DoraIconLabelView, defStyleAttr, 0)
 
-    private fun sp2px(sp: Float): Float {
-        return TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_SP,
-            sp,
-            resources.displayMetrics
+        val drawable = a.getDrawable(R.styleable.DoraIconLabelView_dview_ilv_icon)
+            ?: throw IllegalArgumentException("icon attribute is required.")
+        iconSize = a.getDimensionPixelSize(
+            R.styleable.DoraIconLabelView_dview_ilv_iconSize,
+            drawable.intrinsicWidth.coerceAtLeast(drawable.intrinsicHeight)
         )
+        iconBitmap = Bitmap.createBitmap(
+            iconSize, iconSize,
+            if (drawable.opacity != PixelFormat.OPAQUE) Bitmap.Config.ARGB_8888 else Bitmap.Config.RGB_565
+        )
+        val canvas = Canvas(iconBitmap)
+        drawable.setBounds(0, 0, iconSize, iconSize)
+        drawable.draw(canvas)
+
+        text = a.getString(R.styleable.DoraIconLabelView_dview_ilv_text).orEmpty()
+        iconLabelGap = a.getDimensionPixelSize(
+            R.styleable.DoraIconLabelView_dview_ilv_iconLabelGap,
+            TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6f, resources.displayMetrics).toInt()
+        )
+        labelTextSize = a.getDimension(
+            R.styleable.DoraIconLabelView_dview_ilv_textSize,
+            TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12f, resources.displayMetrics)
+        )
+        labelTextColor = a.getColor(
+            R.styleable.DoraIconLabelView_dview_ilv_textColor,
+            textColors.defaultColor
+        )
+
+        // 背景属性
+        iconBackgroundShape = a.getInt(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundShape, SHAPE_NONE)
+        iconBackgroundColor = a.getColor(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundColor, Color.LTGRAY)
+        iconBackgroundPadding = a.getDimensionPixelSize(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundPadding, 0)
+        iconBackgroundBorder = a.getBoolean(R.styleable.DoraIconLabelView_dview_ilv_iconBackgroundBorder, false)
+        iconCornerRadius = a.getDimension(
+            R.styleable.DoraIconLabelView_dview_ilv_iconCornerRadius,
+            TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, resources.displayMetrics)
+        )
+
+        a.recycle()
+
+        textPaint.textSize = labelTextSize
+        textPaint.color = labelTextColor
     }
 }
